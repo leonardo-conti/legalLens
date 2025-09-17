@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { DocumentTextIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useDocument } from '@/context/DocumentContext';
 import { classifyClauses } from '@/utils/ai';
 import { extractTextFromPDF } from '@/utils/pdfUtils';
@@ -32,7 +32,7 @@ export default function FileUpload() {
     setLoadingMessage(`${step} (${progress}/${total})`);
   };
 
-  const processText = async (text: string, source: string) => {
+  const processText = async (text: string) => {
     try {
       // Reset status
       setError(null);
@@ -138,7 +138,7 @@ export default function FileUpload() {
         throw new Error('The document appears to be empty.');
       }
 
-      await processText(text, file.type === 'application/pdf' ? 'PDF' : 'document');
+      await processText(text);
     } catch (err) {
       console.error('File processing error:', err);
       setError(err instanceof Error ? err.message : 'Failed to process the file');
@@ -320,7 +320,7 @@ export default function FileUpload() {
             const text = e.target.value.trim();
             if (text) {
               setIsLoading(true);
-              await processText(text, 'text');
+              await processText(text);
               setIsLoading(false);
             } else {
               clearFile();

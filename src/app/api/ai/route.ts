@@ -139,7 +139,7 @@ function mockClauseAnalysis(text: string): LegalClause {
   };
 }
 
-async function mockQuestionAnswer(question: string, document: any): Promise<string> {
+async function mockQuestionAnswer(question: string): Promise<string> {
   const lowerQuestion = question.toLowerCase();
   if (lowerQuestion.includes('what is this document')) {
     return "This appears to be a legal document. I'm currently operating in development mode without AI capabilities, but I can help you understand its basic structure.";
@@ -176,7 +176,7 @@ export async function POST(request: Request) {
           });
         } catch (error) {
           console.warn('Anthropic API error, falling back to mock response:', error);
-          const mockAnswer = await mockQuestionAnswer(question, document);
+          const mockAnswer = await mockQuestionAnswer(question);
           return NextResponse.json({ answer: mockAnswer });
         }
       }

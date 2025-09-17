@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `You are a legal assistant helping users understand legal documents. 
     
 The user has uploaded a legal document with the following clauses:
-${document.clauses.map((clause: any) => `
+${document.clauses.map((clause: { category: string; explanation: string; originalText: string; keyPoints?: string[]; risks?: string[] }) => `
 - ${clause.category}: ${clause.explanation}
   Original text: "${clause.originalText}"
   Key points: ${clause.keyPoints?.join(', ') || 'N/A'}
@@ -32,7 +32,7 @@ Please answer the user's questions about this document in a helpful, clear manne
 
     // Format conversation history for Anthropic
     const messages = [
-      ...conversationHistory.map((msg: any) => ({
+      ...conversationHistory.map((msg: { role: string; content: string }) => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content,
       })),

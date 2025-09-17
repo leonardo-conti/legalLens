@@ -25,12 +25,12 @@ export async function classifyClauses(text: string): Promise<LegalClause[]> {
   }
 }
 
-export async function summarizeClause(clause: string): Promise<string> {
+export async function summarizeClause(): Promise<string> {
   // TODO: Implement with API route
   return 'Clause summary will be implemented soon.';
 }
 
-export async function flagRisks(clause: string): Promise<{ level: 'low' | 'medium' | 'high', details: string }> {
+export async function flagRisks(): Promise<{ level: 'low' | 'medium' | 'high', details: string }> {
   // TODO: Implement with API route
   return { level: 'low', details: 'Risk assessment will be implemented soon.' };
 }
@@ -63,7 +63,7 @@ export async function askQuestion(question: string, document: LegalDocument): Pr
   }
 }
 
-export async function generateSummary(document: LegalDocument): Promise<string> {
+export async function generateSummary(): Promise<string> {
   // TODO: Implement with API route
   return 'Document summary will be implemented soon.';
 } 

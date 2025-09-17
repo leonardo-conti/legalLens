@@ -2,6 +2,8 @@
 
 AI-powered web app to help users understand legal documents (contracts, ToS, leases) in plain English.
 
+**🌐 Live Demo:** https://legallens-7qsuvmo3t-leonardo-contis-projects.vercel.app
+
 ## Features
 
 - Smart clause extraction (Payment, Termination, Liability, etc.)
@@ -67,11 +69,14 @@ src/
 - `.env*` files are git-ignored by default.
 - Do NOT hardcode API keys in code or commit them.
 
-## Deployment (Vercel recommended)
+## Deployment
 
-- Push to GitHub (do not commit `.env.local`).
-- In Vercel project settings, add the env var `ANTHROPIC_API_KEY`.
-- Deploy; Vercel will build and serve the app.
+**Live on Vercel:** https://legallens-7qsuvmo3t-leonardo-contis-projects.vercel.app
+
+To deploy:
+1. Push to GitHub (do not commit `.env.local`)
+2. In Vercel project settings, add the env var `ANTHROPIC_API_KEY`
+3. Deploy; Vercel will build and serve the app
 
 ## Scripts
 
