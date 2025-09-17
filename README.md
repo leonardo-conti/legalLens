@@ -1,59 +1,87 @@
 # LegalLens
 
-LegalLens is a web application that helps users understand legal documents in plain English using AI. Upload your contracts, terms of service, or other legal documents and get clear explanations and risk assessments.
+AI-powered web app to help users understand legal documents (contracts, ToS, leases) in plain English.
 
 ## Features
 
-- 📄 Upload PDF documents or paste text directly
-- 🤖 AI-powered analysis of legal clauses
-- 💬 Ask questions about your documents in plain English
-- ⚠️ Automatic risk assessment and flagging
-- 📝 Simple explanations of complex legal terms
-
-## Getting Started
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env.local` file in the project root with your OpenAI API key:
-   ```
-   OPENAI_API_KEY=your_api_key_here
-   ```
-4. Run the development server:
-```bash
-npm run dev
-```
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+- Smart clause extraction (Payment, Termination, Liability, etc.)
+- Plain-language explanations with risks and key points
+- Risk-first view (high/medium risks surface to the top)
+- Interactive Q&A chat about the uploaded document
+- PDF/text upload with preview and progress
+- Copy analysis and export to .txt
+- Responsive, professional UI (Next.js + TailwindCSS)
 
 ## Tech Stack
 
-- Next.js 14 with App Router
-- TypeScript
-- Tailwind CSS
-- OpenAI API
-- PDF parsing with pdf-parse
-- React Dropzone for file uploads
+- Next.js 15 (App Router), TypeScript
+- TailwindCSS
+- Anthropic Claude API (server-side via API routes)
+- PDF parsing (client-side)
 
-## Project Structure
+## Getting Started
+
+1) Install
+```bash
+npm install
+```
+
+2) Environment variables
+Create `.env.local` in the project root (never commit this file):
+```
+ANTHROPIC_API_KEY=your_claude_api_key
+```
+Note: `.env*` files are ignored by git via `.gitignore`.
+
+3) Run the dev server
+```bash
+npm run dev
+```
+Visit http://localhost:3000
+
+## Project Structure (high level)
 
 ```
 src/
-├── app/                 # Next.js app router pages
-├── components/          # React components
-│   ├── FileUpload.tsx  # File upload component
-│   ├── DocumentViewer.tsx  # Document analysis view
-│   └── ChatInterface.tsx   # Q&A chat interface
-├── context/            # React context providers
-├── types/             # TypeScript type definitions
-└── utils/             # Utility functions and AI helpers
+  app/
+    api/
+      ai/route.ts      # Clause analysis & Q&A (server-side; uses Anthropic)
+      chat/route.ts    # Chat endpoint (server-side)
+    page.tsx           # Landing page (hero, features, how-it-works)
+    layout.tsx         # Global layout & providers
+  components/
+    FileUpload.tsx     # Drag-and-drop + pasted text
+    DocumentViewer.tsx # Risk-first analysis, copy/export, full doc toggle
+    ChatInterface.tsx  # Modern chat UI with suggested prompts
+  context/
+    DocumentContext.tsx
+  types/
+    index.ts
+  utils/
+    ai.ts, pdfUtils.ts
 ```
 
-## Contributing
+## Security & Privacy
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- API keys are only used server-side in API routes.
+- `.env*` files are git-ignored by default.
+- Do NOT hardcode API keys in code or commit them.
 
-## License
+## Deployment (Vercel recommended)
 
-MIT
+- Push to GitHub (do not commit `.env.local`).
+- In Vercel project settings, add the env var `ANTHROPIC_API_KEY`.
+- Deploy; Vercel will build and serve the app.
+
+## Scripts
+
+```bash
+npm run dev     # start dev server
+npm run build   # build for production
+npm run start   # start production server
+```
+
+## Notes
+
+- If you encounter rate/quota issues with the Anthropic API in dev, the API routes include mock fallbacks for basic flows.
+- The full document text is optional and collapsible; analysis prioritizes clause insights and risks.

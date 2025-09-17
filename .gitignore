@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE/editor
+.vscode/
+.idea/
+*.code-workspace
+
+# turbopack / build caches
+.turbo/
+.swc/
+
+# ensure env files are ignored (safety)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
