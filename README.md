@@ -71,7 +71,7 @@ src/
 
 ## Deployment
 
-**Live on Vercel:** https://legallens-7qsuvmo3t-leonardo-contis-projects.vercel.app
+**Live on Vercel:** https://legallens-mu.vercel.app/
 
 To deploy:
 1. Push to GitHub (do not commit `.env.local`)
