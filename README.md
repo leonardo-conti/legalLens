@@ -2,7 +2,7 @@
 
 AI-powered web app to help users understand legal documents (contracts, ToS, leases) in plain English.
 
-**🌐 Live Demo:** https://legallens-7qsuvmo3t-leonardo-contis-projects.vercel.app
+**🌐 Live Domain:** https://legallens-mu.vercel.app/
 
 ## Features
 
