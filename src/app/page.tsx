@@ -37,7 +37,7 @@ export default function Home() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"> Plain English</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Upload any legal document and get instant AI-powered explanations, risk analysis, and answers to your questions. 
+              Upload any legal document and get instant AI-powered explanations, risk analysis, and answers to your questions.
               No legal degree required.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -73,7 +73,7 @@ export default function Home() {
               Everything you need to understand legal documents without the legal jargon
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -86,7 +86,7 @@ export default function Home() {
                 AI automatically breaks down complex legal documents into understandable clauses with clear explanations
               </p>
             </div>
-            
+
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,7 +98,7 @@ export default function Home() {
                 Get instant alerts about potentially risky clauses, unusual terms, and important obligations
               </p>
             </div>
-            
+
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +123,7 @@ export default function Home() {
               Get instant legal document insights in just three simple steps
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
@@ -134,7 +134,7 @@ export default function Home() {
                 Simply drag and drop your PDF or paste the text directly. We support contracts, terms of service, leases, and more.
               </p>
             </div>
-            
+
             <div className="text-center">
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
                 2
@@ -144,7 +144,7 @@ export default function Home() {
                 Our advanced AI breaks down your document into clauses, explains each section in plain English, and identifies potential risks.
               </p>
             </div>
-            
+
             <div className="text-center">
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
                 3
@@ -167,7 +167,7 @@ export default function Home() {
           </div>
           <FileUpload />
         </div>
-        
+
         <div className="grid lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
             <div className="flex items-center mb-6">
@@ -180,7 +180,7 @@ export default function Home() {
             </div>
             <DocumentViewer />
           </div>
-          
+
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
             <div className="flex items-center mb-6">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
