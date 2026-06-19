@@ -1,28 +1,42 @@
 import { LegalDocument, LegalClause } from '@/types';
 
-export async function classifyClauses(text: string): Promise<LegalClause[]> {
+const REQUEST_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'classifyClauses',
-        content: text,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to classify clauses');
-    }
-
-    const data = await response.json();
-    return data.clauses;
-  } catch (error) {
-    console.error('Error classifying clauses:', error);
-    return [];
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
   }
+}
+
+export async function classifyClauses(text: string): Promise<LegalClause[]> {
+  const response = await fetchWithTimeout('/api/ai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'classifyClauses',
+      content: text,
+    }),
+  });
+
+  // Let errors propagate instead of swallowing them into an empty array -
+  // the caller (FileUpload) already shows whatever message is thrown here,
+  // so silently returning [] would hide the real reason (rate limit,
+  // timeout, server error, ...) and look like "no clauses found."
+  if (response.status === 429) {
+    throw new Error("You're uploading documents too quickly. Please wait a moment and try again.");
+  }
+  if (!response.ok) {
+    throw new Error('Failed to classify clauses. Please try again.');
+  }
+
+  const data = await response.json();
+  return data.clauses;
 }
 
 export async function summarizeClause(): Promise<string> {
@@ -37,7 +51,7 @@ export async function flagRisks(): Promise<{ level: 'low' | 'medium' | 'high', d
 
 export async function askQuestion(question: string, document: LegalDocument): Promise<string> {
   try {
-    const response = await fetch('/api/ai', {
+    const response = await fetchWithTimeout('/api/ai', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
