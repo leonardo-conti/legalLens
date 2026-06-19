@@ -14,6 +14,8 @@ export interface LegalClause {
   riskDetails?: string;
   keyPoints: string[];
   risks: string[];
+  /** True when this analysis came from the local mock fallback, not Claude. */
+  isFallback?: boolean;
 }
 
 export interface ChatMessage {
