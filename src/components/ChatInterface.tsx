@@ -1,20 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDocument } from '@/context/DocumentContext';
 import { ChatMessage } from '@/types';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import ChatMessageComponent from './ChatMessage';
+
+const REQUEST_TIMEOUT_MS = 30000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export default function ChatInterface() {
   const { document } = useDocument();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  // Each document gets a fresh conversation - otherwise leftover Q&A about
+  // a previous document stays visible and gets sent as context to the AI
+  // alongside the new document, which can produce confused answers.
+  useEffect(() => {
+    setMessages([]);
+    setInput('');
+    setChatError(null);
+  }, [document?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !document) return;
+    if (!input.trim() || !document || isLoading) return;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -24,10 +46,11 @@ export default function ChatInterface() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setChatError(null);
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetchWithTimeout('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,42 +62,45 @@ export default function ChatInterface() {
         }),
       });
 
+      if (response.status === 429) {
+        setChatError("You're sending messages too quickly. Please wait a moment and try again.");
+        return;
+      }
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
 
       const data = await response.json();
-      
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: data.response,
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+      if (data.isFallback) {
+        setChatError('The AI assistant is running in degraded mode right now, so this answer may be less accurate than usual.');
+      }
     } catch (error) {
       console.error('Failed to get response:', error);
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setChatError('Sorry, something went wrong sending your message. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRegenerate = async (messageIndex: number) => {
-    if (!document) return;
-    
+    if (!document || isLoading) return;
+
     // Find the user message that prompted this assistant response
     const userMessage = messages[messageIndex - 1];
     if (!userMessage || userMessage.role !== 'user') return;
 
+    setChatError(null);
     setIsLoading(true);
-    
+
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetchWithTimeout('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,25 +112,33 @@ export default function ChatInterface() {
         }),
       });
 
+      if (response.status === 429) {
+        setChatError("You're sending messages too quickly. Please wait a moment and try again.");
+        return;
+      }
       if (!response.ok) {
         throw new Error('Failed to regenerate response');
       }
 
       const data = await response.json();
-      
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: data.response,
         timestamp: Date.now(),
       };
-      
+
       setMessages(prev => {
         const newMessages = [...prev];
         newMessages[messageIndex] = assistantMessage;
         return newMessages;
       });
+      if (data.isFallback) {
+        setChatError('The AI assistant is running in degraded mode right now, so this answer may be less accurate than usual.');
+      }
     } catch (error) {
       console.error('Failed to regenerate response:', error);
+      setChatError('Sorry, something went wrong regenerating that response. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +168,7 @@ export default function ChatInterface() {
           Online
         </div>
       </div>
-      
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
@@ -193,10 +227,11 @@ export default function ChatInterface() {
               isUser={message.role === 'user'}
               timestamp={new Date(message.timestamp)}
               onRegenerate={message.role === 'assistant' ? () => handleRegenerate(index) : undefined}
+              isLoading={isLoading}
             />
           ))
         )}
-        
+
         {isLoading && (
           <div className="flex items-center space-x-2 text-gray-500">
             <div className="flex space-x-1">
@@ -208,6 +243,13 @@ export default function ChatInterface() {
           </div>
         )}
       </div>
+
+      {/* Error / degraded-mode banner */}
+      {chatError && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-sm text-red-700">
+          {chatError}
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
@@ -241,4 +283,4 @@ export default function ChatInterface() {
       </div>
     </div>
   );
-} 
+}
