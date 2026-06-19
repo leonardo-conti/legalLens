@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDocument } from '@/context/DocumentContext';
 import { LegalClause } from '@/types';
-import { 
-  ExclamationTriangleIcon, 
+import {
+  ExclamationTriangleIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -24,9 +24,20 @@ export default function DocumentViewer() {
   const [showFullDocument, setShowFullDocument] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Clause IDs are regenerated per-document but reused across documents
+  // (clause-1, clause-2, ...), so without this, expanding a clause or the
+  // full-text view in one document would leave it pre-expanded after
+  // uploading a completely different document.
+  useEffect(() => {
+    setExpandedClauseId(null);
+    setShowFullDocument(false);
+  }, [document?.id]);
+
   if (!document) {
     return null;
   }
+
+  const hasFallbackClauses = document.clauses.some(clause => clause.isFallback);
 
   const copyAnalysisToClipboard = async () => {
     const analysisText = document.clauses
@@ -154,6 +165,7 @@ ${'='.repeat(50)}`;
             <button
               className="ml-4 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
               aria-expanded={isExpanded}
+              aria-label={isExpanded ? 'Collapse clause details' : 'Expand clause details'}
             >
               {isExpanded ? (
                 <ChevronUpIcon className="w-5 h-5" />
@@ -211,7 +223,7 @@ ${'='.repeat(50)}`;
             {(clause.risks.length > 0 || clause.riskDetails) && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  <ExclamationCircleIcon 
+                  <ExclamationCircleIcon
                     className={`w-5 h-5 mr-2 ${
                       clause.riskLevel === 'high' ? 'text-red-500' :
                       clause.riskLevel === 'medium' ? 'text-yellow-500' :
@@ -263,6 +275,12 @@ ${'='.repeat(50)}`;
 
   return (
     <div className="space-y-6">
+      {hasFallbackClauses && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          Some clauses were analyzed in degraded mode (the AI service was temporarily unavailable) and use simplified, rule-based explanations instead of full AI analysis. Try re-uploading the document later for a complete analysis.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -280,8 +298,8 @@ ${'='.repeat(50)}`;
             <button
               onClick={copyAnalysisToClipboard}
               className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                copySuccess 
-                  ? 'bg-green-100 text-green-700' 
+                copySuccess
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -298,7 +316,7 @@ ${'='.repeat(50)}`;
           </div>
         </div>
       </div>
-      
+
       {/* Summary Stats - Prominent */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
         <h4 className="text-sm font-semibold text-gray-900 mb-4">Analysis Summary</h4>
@@ -346,7 +364,7 @@ ${'='.repeat(50)}`;
           )}
         </div>
       )}
-      
+
       {/* Clauses Grid */}
       <div className="space-y-4">
         {document.clauses
@@ -374,7 +392,7 @@ ${'='.repeat(50)}`;
             <ChevronDownIcon className="w-5 h-5 ml-2 text-gray-500" />
           )}
         </button>
-        
+
         {showFullDocument && (
           <div className="mt-4 bg-gray-50 rounded-xl p-6">
             <h4 className="text-sm font-semibold text-gray-900 mb-3">Complete Document Text</h4>
@@ -386,4 +404,4 @@ ${'='.repeat(50)}`;
       </div>
     </div>
   );
-} 
+}
