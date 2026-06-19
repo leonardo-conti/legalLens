@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 export async function extractTextFromPDF(file: File): Promise<string> {
   try {
     // Validate file type and size
-    if (!file.type.includes('pdf')) {
+    if (file.type !== 'application/pdf') {
       throw new Error('Please upload a valid PDF file.');
     }
 

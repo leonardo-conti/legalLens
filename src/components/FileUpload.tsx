@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useDocument } from '@/context/DocumentContext';
 import { classifyClauses } from '@/utils/ai';
 import { extractTextFromPDF } from '@/utils/pdfUtils';
+import { MAX_DOCUMENT_LENGTH } from '@/utils/constants';
 import { LegalClause } from '@/types';
 
 interface ProcessingStatus {
@@ -32,65 +33,72 @@ export default function FileUpload() {
     setLoadingMessage(`${step} (${progress}/${total})`);
   };
 
-  const processText = async (text: string) => {
+  const processText = useCallback(async (text: string) => {
     try {
       // Reset status
       setError(null);
       setProcessingStatus(null);
-      
-      // Step 1: Initial text processing
-      updateStatus('Processing document', 1, 4);
-      
+
+      if (text.length > MAX_DOCUMENT_LENGTH) {
+        throw new Error(
+          `This document is too long (${text.length.toLocaleString()} characters). Please use a document under ${MAX_DOCUMENT_LENGTH.toLocaleString()} characters.`
+        );
+      }
+
       // Split text into logical sections (paragraphs, numbered items, etc.)
       const sections = text.split(/(?:\r?\n){2,}/)
         .map(section => section.trim())
         .filter(section => section.length > 0);
-      
-      // Step 2: Preparing sections
-      updateStatus('Preparing sections', 2, 4);
-      
+
       // Group related sections if they seem to be part of the same clause
       const processedSections = sections.reduce((acc: string[], section) => {
         const lastSection = acc[acc.length - 1];
-        
+
         // Check if this section is likely a continuation of the previous one
-        const isContinuation = 
+        const isContinuation =
           !section.match(/^[\d.]+|^[A-Z][\).]|^SECTION|^Article/i) && // Not a new numbered section
           lastSection &&
           !lastSection.endsWith('.'); // Previous section doesn't end with a period
-        
+
         if (isContinuation && lastSection) {
           acc[acc.length - 1] = `${lastSection}\n${section}`;
         } else {
           acc.push(section);
         }
-        
+
         return acc;
       }, []);
 
-      // Step 3: Analyzing clauses
-      updateStatus('Analyzing clauses', 3, 4);
-      
-      // Process clauses in batches to avoid overwhelming the API
       const BATCH_SIZE = 5;
+      const totalBatches = Math.max(1, Math.ceil(processedSections.length / BATCH_SIZE));
+      const totalSteps = totalBatches + 3; // processing, preparing, N batches, finalizing
+
+      // Step 1: Initial text processing
+      updateStatus('Processing document', 1, totalSteps);
+
+      // Step 2: Preparing sections
+      updateStatus('Preparing sections', 2, totalSteps);
+
+      // Step 3: Analyzing clauses, batch by batch so progress reflects
+      // actual completion instead of being stuck at a fixed fraction
       const clauses: LegalClause[] = [];
-      
-      for (let i = 0; i < processedSections.length; i += BATCH_SIZE) {
-        const batch = processedSections.slice(i, i + BATCH_SIZE);
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const start = batchIndex * BATCH_SIZE;
+        const batch = processedSections.slice(start, start + BATCH_SIZE);
+        updateStatus(
+          `Analyzing clauses (batch ${batchIndex + 1}/${totalBatches})`,
+          2 + batchIndex + 1,
+          totalSteps,
+        );
+        if (batch.length === 0) continue;
         const batchClauses = await classifyClauses(batch.join('\n\n---\n\n'));
         clauses.push(...batchClauses);
-        
-        // Update progress within the analysis step
-        updateStatus(
-          'Analyzing clauses',
-          3,
-          4,
-        );
       }
 
       // Step 4: Finalizing
-      updateStatus('Finalizing document', 4, 4);
-      
+      updateStatus('Finalizing document', totalSteps, totalSteps);
+
       // Create the document with analyzed clauses
       setDocument({
         id: Date.now().toString(),
@@ -103,20 +111,28 @@ export default function FileUpload() {
 
       // Set preview of the first few hundred characters
       setPreview(text.slice(0, 500) + (text.length > 500 ? '...' : ''));
-      
+
       // Clear status on completion
       setProcessingStatus(null);
       setLoadingMessage('');
     } catch (err) {
       console.error('Error processing document:', err);
-      setError('Failed to analyze the document. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to analyze the document. Please try again.');
       setDocument(null);
     }
-  };
+  }, [setDocument]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+
+    // A file drop always wins over a pending paste-and-wait timer - otherwise
+    // the stale debounced text from the textarea could fire later and
+    // silently overwrite the document we're about to process from this file.
+    if (textareaDebounceRef.current) {
+      clearTimeout(textareaDebounceRef.current);
+      textareaDebounceRef.current = null;
+    }
 
     setFileName(file.name);
     setIsLoading(true);
@@ -146,10 +162,26 @@ export default function FileUpload() {
     } finally {
       setIsLoading(false);
     }
-  }, [setDocument]);
+  }, [setDocument, processText]);
+
+  // react-dropzone silently swallows files that don't match `accept`/`maxSize`
+  // unless we handle onDropRejected ourselves - without this, dropping an
+  // unsupported file type does nothing at all with no feedback to the user.
+  const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
+    const rejection = fileRejections[0];
+    if (!rejection) return;
+
+    const isTooLarge = rejection.errors.some(e => e.code === 'file-too-large');
+    setError(
+      isTooLarge
+        ? 'File is too large. Maximum size is 10MB.'
+        : 'Unsupported file type. Please upload a PDF or TXT file.'
+    );
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: {
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
@@ -168,14 +200,40 @@ export default function FileUpload() {
     setProcessingStatus(null);
   };
 
+  const textareaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (textareaDebounceRef.current) clearTimeout(textareaDebounceRef.current);
+    };
+  }, []);
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value.trim();
+    if (textareaDebounceRef.current) clearTimeout(textareaDebounceRef.current);
+
+    if (!text) {
+      clearFile();
+      return;
+    }
+
+    // Wait for typing/pasting to settle before triggering analysis, so
+    // partial pastes and fast typing don't fire redundant API calls.
+    textareaDebounceRef.current = setTimeout(async () => {
+      setIsLoading(true);
+      await processText(text);
+      setIsLoading(false);
+    }, 600);
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* File Upload Area */}
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-200
-          ${isDragActive 
-            ? 'border-blue-500 bg-blue-50 scale-105 shadow-lg' 
+          ${isDragActive
+            ? 'border-blue-500 bg-blue-50 scale-105 shadow-lg'
             : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 hover:shadow-md'
           }
           ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -233,10 +291,10 @@ export default function FileUpload() {
                   <span>{processingStatus.progress}/{processingStatus.totalSteps}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out"
-                    style={{ 
-                      width: `${(processingStatus.progress / processingStatus.totalSteps) * 100}%` 
+                    style={{
+                      width: `${(processingStatus.progress / processingStatus.totalSteps) * 100}%`
                     }}
                   ></div>
                 </div>
@@ -287,6 +345,7 @@ export default function FileUpload() {
               </div>
               <button
                 onClick={clearFile}
+                aria-label="Remove uploaded file"
                 className="text-gray-400 hover:text-gray-500 transition-colors p-1 rounded-lg hover:bg-gray-100"
               >
                 <XMarkIcon className="w-5 h-5" />
@@ -316,16 +375,7 @@ export default function FileUpload() {
         <textarea
           className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
           placeholder="Paste your legal document text here..."
-          onChange={async (e) => {
-            const text = e.target.value.trim();
-            if (text) {
-              setIsLoading(true);
-              await processText(text);
-              setIsLoading(false);
-            } else {
-              clearFile();
-            }
-          }}
+          onChange={handleTextareaChange}
           disabled={isLoading}
         />
         <div className="mt-3 flex items-center justify-center text-xs text-gray-500">
@@ -337,4 +387,4 @@ export default function FileUpload() {
       </div>
     </div>
   );
-} 
+}
